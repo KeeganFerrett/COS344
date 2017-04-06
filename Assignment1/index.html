@@ -147,28 +147,36 @@
 		var cubeVertexColorBuffer;
 		var cubeVertexIndexBuffer;
 
+		var cubeXShearingFactor = 0;
+		var cubeYShearingFactor = 0;
+		var cubeZShearingFactor = 0;
+
+		var pyramidXShearingFactor = 0;
+		var pyramidYShearingFactor = 0;
+		var pyramidZShearingFactor = 0;
+
 		function initBuffers() {
 			pyramidVertexPositionBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
 			//Defining the vertices
 			var vertices = [
 				// Front face
-				0.0, 1.0, 0.0,
+				0.0+pyramidXShearingFactor, 1.0+pyramidYShearingFactor, 0.0+pyramidZShearingFactor,
 				-1.0, -1.0, 1.0,
 				1.0, -1.0, 1.0,
 
 				//Right face NOT SHOWING???????????
-				0.0, 1.0, 0.0,
+				0.0+pyramidXShearingFactor, 1.0+pyramidYShearingFactor, 0.0+pyramidZShearingFactor,
 				1.0, -1.0, 1.0,
 				1.0, -1.0, -1.0,
 
 				//Back face
-				0.0, 1.0, 0.0,
+				0.0+pyramidXShearingFactor, 1.0+pyramidYShearingFactor, 0.0+pyramidZShearingFactor,
 				1.0, -1.0, -1.0,
 				-1.0, -1.0, -1.0,
 
 				//Left face
-				0.0, 1.0, 0.0,
+				0.0+pyramidXShearingFactor, 1.0+pyramidYShearingFactor, 0.0+pyramidZShearingFactor,
 				-1.0, -1.0, -1.0,
 				-1.0, -1.0, 1.0
 			];
@@ -179,68 +187,60 @@
 			pyramidVertexColorBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexColorBuffer);
 			var colors = [
-				// Front face
-	            1.0, 0.0, 0.0, 1.0,
-	            0.0, 1.0, 0.0, 1.0,
-	            0.0, 0.0, 1.0, 1.0,
-
-	            // Right face
-	            1.0, 0.0, 0.0, 1.0,
-	            0.0, 0.0, 1.0, 1.0,
-	            0.0, 1.0, 0.0, 1.0,
-
-	            // Back face
-	            1.0, 0.0, 0.0, 1.0,
-	            0.0, 1.0, 0.0, 1.0,
-	            0.0, 0.0, 1.0, 1.0,
-
-	            // Left face
-	            1.0, 0.0, 0.0, 1.0,
-	            0.0, 0.0, 1.0, 1.0,
-	            0.0, 1.0, 0.0, 1.0
+	            [0.211764706, 0.176470588, 0.203921569, 1.0],// Front face
+	            [0.792156863, 0.11372549,  0.337254902, 1.0],// Right face
+	            [0.925490196, 0.466666667, 0.6, 1.0],// Back face
+	            [0.980392157, 0.839215686, 0.88627451, 1.0]// Left face
 			];
-			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+			var unpackedColors = [];
+			for (var i in colors) {
+				var color = colors[i];
+				for (var j = 0; j < 4; ++j) {
+					unpackedColors = unpackedColors.concat(color);
+				}
+			}
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedColors), gl.STATIC_DRAW);
 			pyramidVertexColorBuffer.itemSize = 4;
-			pyramidVertexColorBuffer.numItems = 12;
+			pyramidVertexColorBuffer.numItems = 24;
 
 			cubeVertexPositionBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
 			vertices = [
 				//Front face
 				-1.0, -1.0, 1.0,
-				 1.0, -1.0, 1.0,
-				 1.0,  1.0, 1.0,
-				-1.0,  1.0, 1.0,
+				 1.0, -1.0+cubeYShearingFactor, 1.0,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor, 1.0+cubeZShearingFactor,
+				-1.0+cubeXShearingFactor,  1.0, 1.0+cubeZShearingFactor,
 
 				//Back face
 				-1.0, -1.0, -1.0,
-				-1.0,  1.0, -1.0,
-				 1.0,  1.0, -1.0,
-				 1.0, -1.0, -1.0,
+				-1.0+cubeXShearingFactor,  1.0, -1.0+cubeZShearingFactor,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor, -1.0+cubeZShearingFactor,
+				 1.0, -1.0+cubeYShearingFactor, -1.0,
 
 				//Top face
-				-1.0,  1.0, -1.0,
-				-1.0,  1.0,  1.0,
-				 1.0,  1.0,  1.0,
-				 1.0,  1.0, -1.0,
+				-1.0+cubeXShearingFactor,  1.0, -1.0+cubeZShearingFactor,
+				-1.0+cubeXShearingFactor,  1.0,  1.0+cubeZShearingFactor,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor,  1.0+cubeZShearingFactor,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor, -1.0+cubeZShearingFactor,
 
 				//Bottom face
 				-1.0, -1.0, -1.0,
-				 1.0, -1.0, -1.0,
-				 1.0, -1.0,  1.0,
+				 1.0, -1.0+cubeYShearingFactor, -1.0,
+				 1.0, -1.0+cubeYShearingFactor,  1.0,
 				-1.0, -1.0,  1.0,
 
 				//Right face
-				 1.0, -1.0, -1.0,
-				 1.0,  1.0, -1.0,
-				 1.0,  1.0,  1.0,
-				 1.0, -1.0,  1.0,
+				 1.0, -1.0+cubeYShearingFactor, -1.0,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor, -1.0+cubeZShearingFactor,
+				 1.0+cubeXShearingFactor,  1.0+cubeYShearingFactor,  1.0+cubeZShearingFactor,
+				 1.0, -1.0+cubeYShearingFactor,  1.0,
 
 				//Left face
 				-1.0, -1.0, -1.0,
 				-1.0, -1.0,  1.0,
-				-1.0,  1.0,  1.0,
-				-1.0,  1.0, -1.0		
+				-1.0+cubeXShearingFactor,  1.0,  1.0+cubeZShearingFactor,
+				-1.0+cubeXShearingFactor,  1.0, -1.0+cubeZShearingFactor		
 			];
 			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 			cubeVertexPositionBuffer.itemSize = 3;
@@ -315,6 +315,9 @@
 		var buildAHouse = false;
 
 		function drawScene() {
+
+			if (true) {initBuffers();}
+			
 			gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -365,9 +368,12 @@
 			if (!buildAHouse) {
 				var timeNow = new Date().getTime();
 				if (lastTime != 0) {
+					pyramidRSpeed = document.getElementById('pyramidSpeed').value;
+					cudeRSpeed = document.getElementById('cudeSpeed').value;
+
 					var elapsed = timeNow - lastTime;
-					rPyramid += (90 * elapsed) / 1000.0;
-					rCube -= (75 * elapsed) / 1000.0;
+					rPyramid += (pyramidRSpeed * elapsed) / 1000.0;
+					rCube -= (cudeRSpeed * elapsed) / 1000.0;
 
 					CubeXRotate = document.getElementById('xCubeR').value/ 100;
 					CubeYRotate = document.getElementById('yCubeR').value/ 100;
@@ -381,6 +387,10 @@
 					CubeYTrandlate = document.getElementById('yCubeT').value/ 10;
 					CubeZTrandlate = document.getElementById('zCubeT').value/ 10;
 
+					cubeXShearingFactor = document.getElementById('xCubeSh').value / 100;
+					cubeYShearingFactor = document.getElementById('yCubeSh').value / 100;
+					cubeZShearingFactor = document.getElementById('zCubeSh').value / 100;
+
 					PyramidXRotate = document.getElementById('xPyramidR').value/ 100;
 					PyramidYRotate = document.getElementById('yPyramidR').value/ 100;
 					PyramidZRotate = document.getElementById('zPyramidR').value/ 100;
@@ -392,9 +402,13 @@
 					PyramidXTrandlate = document.getElementById('xPyramidT').value/ 10;
 					PyramidYTrandlate = document.getElementById('yPyramidT').value/ 10;
 					PyramidZTrandlate = document.getElementById('zPyramidT').value/ 10;
+
+					pyramidXShearingFactor = document.getElementById('xPyramidSh').value / 100;
+					pyramidYShearingFactor = document.getElementById('yPyramidSh').value / 100;
+					pyramidZShearingFactor = document.getElementById('zPyramidSh').value / 100;
 				}
 				lastTime = timeNow;
-			}
+			} else {}
 			
 		}
 
@@ -409,10 +423,10 @@
 			var canvas = document.getElementById("webgl-intro");
 			initGL(canvas);
         	
-        	initShaders()
-        	initBuffers();
+        	initShaders();
         	
-        	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        	
+        	gl.clearColor(1.0, 1.0, 1.0, 1.0);
         	gl.enable(gl.DEPTH_TEST);
 
         	tick();
@@ -430,6 +444,10 @@
 			document.getElementById('xCubeT').value = 40;
 			document.getElementById('yCubeT').value = 0;
 			document.getElementById('zCubeT').value = 0;
+
+			document.getElementById('xCubeSh').value = 0;
+			document.getElementById('yCubeSh').value = 0;
+			document.getElementById('zCubeSh').value = 0;
 		}
 
 		function resetPyramid() {
@@ -444,6 +462,10 @@
 			document.getElementById('xPyramidT').value = 0;
 			document.getElementById('yPyramidT').value = 0;
 			document.getElementById('zPyramidT').value = 0;
+
+			document.getElementById('xPyramidSh').value = 0;
+			document.getElementById('yPyramidSh').value = 0;
+			document.getElementById('zPyramidSh').value = 0;
 		}
 
 		function buildHouse() {
@@ -472,15 +494,63 @@
 			PyramidYTrandlate = 1;
 			PyramidZTrandlate = 0;
 
-			document.getElementById('basic').style.visibility = 'hidden';
+			document.getElementById('basic').style.display = 'none';
 			document.getElementById('house').style.visibility = 'visible';
 		}
 	</script>
 </head>
-<body onload="webGLStart();">
-	<canvas id="webgl-intro" width="1000" height="400"></canvas>
+<body onload="webGLStart();" style="margin: 0;">
+	<div style="width: 100%"><canvas id="webgl-intro" width="1000" height="375" style=""></canvas></div>
 
 	<div style="width: 100%; overflow: hidden; visibility: visible;" id='basic'>
+		<div class='pyramid' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
+			<h3>Pyramid Controls</h3>
+			<form style="float:left;">
+				<label>x-rotation</label><br>
+				<input type="range" id="xPyramidR" value="0" max="100" min="-100"><br>
+
+				<label>y-rotation</label><br>
+				<input type="range" id="yPyramidR" value="0" max="100" min="-100"><br>
+
+				<label>z-rotation</label><br>
+				<input type="range" id="zPyramidR" value="0" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-scaling</label><br>
+				<input type="range" id="xPyramidSc" value="20" max="100" min="-100"><br>
+
+				<label>y-scaling</label><br>
+				<input type="range" id="yPyramidSc" value="20" max="100" min="-100"><br>
+
+				<label>z-scaling</label><br>
+				<input type="range" id="zPyramidSc" value="20" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-translation</label><br>
+				<input type="range" id="xPyramidT" value="0" max="40" min="-20"><br>
+
+				<label>y-translation</label><br>
+				<input type="range" id="yPyramidT" value="0" max="35" min="-30"><br>
+
+				<label>z-translation</label><br>
+				<input type="range" id="zPyramidT" value="0" max="35" min="-120"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-shearing</label><br>
+				<input type="range" id="xPyramidSh" value="0" max="100" min="-100"><br>
+
+				<label>y-shearing</label><br>
+				<input type="range" id="yPyramidSh" value="0" max="100" min="-100"><br>
+
+				<label>z-shearing</label><br>
+				<input type="range" id="zPyramidSh" value="0" max="100" min="-100"><br>
+			</form><br>
+			<label>Rotarion Speed</label><br>
+				<input type="range" id="pyramidSpeed" value="0" max="180" min="0" style="width: 100%">
+			<br>
+
+			<button onclick="resetPyramid();">Reset Pyramid</button>
+		</div>
 		<div class='cube' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
 			<h3>Cube Controls</h3>
 			<form style="float:left;">
@@ -512,44 +582,23 @@
 
 				<label>z-translation</label><br>
 				<input type="range" id="zCubeT" value="0" max="50" min="-50"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-shearing</label><br>
+				<input type="range" id="xCubeSh" value="0" max="100" min="-100"><br>
+
+				<label>y-shearing</label><br>
+				<input type="range" id="yCubeSh" value="0" max="100" min="-100"><br>
+
+				<label>z-shearing</label><br>
+				<input type="range" id="zCubeSh" value="0" max="100" min="-100"><br>
 			</form><br>
+
+			<label>Rotarion Speed</label><br>
+				<input type="range" id="cudeSpeed" value="0" max="180" min="0" style="width: 100%">
+			<br>
 
 			<button onclick="resetCube();">Reset Cube</button>
-		</div>
-		<div class='pyramid' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
-			<h3>Pyramid Controls</h3>
-			<form style="float:left;">
-				<label>x-rotation</label><br>
-				<input type="range" id="xPyramidR" value="0" max="100" min="-100"><br>
-
-				<label>y-rotation</label><br>
-				<input type="range" id="yPyramidR" value="0" max="100" min="-100"><br>
-
-				<label>z-rotation</label><br>
-				<input type="range" id="zPyramidR" value="0" max="100" min="-100"><br>
-			</form>
-			<form style="float:left;">
-				<label>x-scaling</label><br>
-				<input type="range" id="xPyramidSc" value="20" max="100" min="-100"><br>
-
-				<label>y-scaling</label><br>
-				<input type="range" id="yPyramidSc" value="20" max="100" min="-100"><br>
-
-				<label>z-scaling</label><br>
-				<input type="range" id="zPyramidSc" value="20" max="100" min="-100"><br>
-			</form>
-			<form style="float:left;">
-				<label>x-translation</label><br>
-				<input type="range" id="xPyramidT" value="0" max="20" min="-20"><br>
-
-				<label>y-translation</label><br>
-				<input type="range" id="yPyramidT" value="0" max="35" min="-30"><br>
-
-				<label>z-translation</label><br>
-				<input type="range" id="zPyramidT" value="0" max="35" min="-120"><br>
-			</form><br>
-
-			<button onclick="resetPyramid();">Reset Pyramid</button>
 		</div>
 		<div class='houseButton' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
 			<button onclick="buildHouse();">Build A House</button>
@@ -561,33 +610,33 @@
 			<h3>House Controls</h3>
 			<form style="float:left;">
 				<label>x-rotation</label><br>
-				<input type="range" id="xCubeR" value="0" max="100" min="-100"><br>
+				<input type="range" id="xHouseR" value="0" max="100" min="-100"><br>
 
 				<label>y-rotation</label><br>
-				<input type="range" id="yCubeR" value="0" max="100" min="-100"><br>
+				<input type="range" id="yHouseR" value="0" max="100" min="-100"><br>
 
 				<label>z-rotation</label><br>
-				<input type="range" id="zCubeR" value="0" max="100" min="-100"><br>
+				<input type="range" id="zHouseR" value="0" max="100" min="-100"><br>
 			</form>
 			<form style="float:left;">
 				<label>x-scaling</label><br>
-				<input type="range" id="xCubeSc" value="20" max="100" min="-100"><br>
+				<input type="range" id="xHouseSc" value="20" max="100" min="-100"><br>
 
 				<label>y-scaling</label><br>
-				<input type="range" id="yCubeSc" value="20" max="100" min="-100"><br>
+				<input type="range" id="yHouseSc" value="20" max="100" min="-100"><br>
 
 				<label>z-scaling</label><br>
-				<input type="range" id="zCubeSc" value="20" max="100" min="-100"><br>
+				<input type="range" id="zHouseSc" value="20" max="100" min="-100"><br>
 			</form>
 			<form style="float:left;">
 				<label>x-translation</label><br>
-				<input type="range" id="xCubeT" value="40" max="70" min="25"><br>
+				<input type="range" id="xHouseT" value="0" max="100" min="-100"><br>
 
 				<label>y-translation</label><br>
-				<input type="range" id="yCubeT" value="0" max="50" min="-50"><br>
+				<input type="range" id="yHouseT" value="0" max="100" min="-100"><br>
 
 				<label>z-translation</label><br>
-				<input type="range" id="zCubeT" value="0" max="50" min="-50"><br>
+				<input type="range" id="zHouseT" value="0" max="100" min="-100"><br>
 			</form><br>
 
 			<button onclick="resetCube();">Reset House</button>
