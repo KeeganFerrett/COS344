@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Pratical 1</title>
+	<title>Assignment 1</title>
 	<script type="text/javascript" src="glMatrix-0.9.5.js"></script>
+	<script type="text/javascript" src="webgl-utils.js"></script>
 	<script type="text/javascript">
 		var gl;
 		function initGL (canvas) {
@@ -19,24 +20,31 @@
 
 	<script id="shader-vs" type="x-shader/x-vertex">
 		attribute vec3 vertexPosition;
+		attribute vec4 vertexColor;
 
 		uniform mat4 uMVMatrix;
 		uniform mat4 uPMatrix;
 
+		varying vec4 vColor;
+
 		void main(void) {
 			gl_Position = uPMatrix * uMVMatrix * vec4(vertexPosition, 1.0);
+			vColor = vertexColor;
 		}
 	</script>
 
 	<script id="shader-fs" type="x-shader/x-fragment">
 		precision mediump float;
 
+		varying vec4 vColor;
+
 		void main(void) {
-			gl_FragColor = vec4(0.8745, 0.7725, 0.3098, 1.0);
+			gl_FragColor = vColor;
 		}
 	</script>
 
 	<script type="text/javascript">
+		//Don't EVER touch this though
 		function getShader(gl, id) {
 			var shaderScript = document.getElementById(id);
 			if (!shaderScript) {
@@ -75,6 +83,7 @@
 
 		var shader_program;
 
+		//Don't EVER touch this though
 		function initShaders() {
 			var fragmentShader = getShader(gl, "shader-fs");
 			var vertexShader = getShader(gl, "shader-vs");
@@ -95,65 +104,494 @@
 			//alert(shader_program.vertexPositionAttribute);
 
 			gl.enableVertexAttribArray(shader_program.vertexPositionAttribute);
+			shader_program.vertexColorAttribute = gl.getAttribLocation(shader_program, "vertexColor");
+	        gl.enableVertexAttribArray(shader_program.vertexColorAttribute);
 
 			shader_program.pMatrixLocation = gl.getUniformLocation(shader_program, "uPMatrix");
 			shader_program.mvMatrixLocation = gl.getUniformLocation(shader_program, "uMVMatrix");
 		}
 
 		var mvMatrix = mat4.create();
+		var mvMatrixStack = [];
 		var pMatrix = mat4.create();
 
+		//New Meta: Basically these to function allow us to rotate things around themselves not each other
+		//Though that would be cool
+		function mvPushMatrix() {
+			var copy = mat4.create();
+			mat4.set(mvMatrix, copy);
+			mvMatrixStack.push(copy)
+		}
+
+		function mvPopMatrix() {
+			if (mvMatrixStack.length == 0) {
+				throw "Invalid popMatrix... brah";
+			}
+			mvMatrix = mvMatrixStack.pop();
+		}
+
+		////Don't EVER touch this though
 		function setMatrixUniforms() {
 			gl.uniformMatrix4fv(shader_program.pMatrixLocation, false, pMatrix);
 			gl.uniformMatrix4fv(shader_program.mvMatrixLocation, false, mvMatrix);
 		}
 
-		var triangleVertexPositionBuffer;
+		//Helper function to deal with rotation
+		function degToRad(degrees) {
+			return degrees * Math.PI / 180;
+		}
+
+		var pyramidVertexPositionBuffer;
+		var pyramidVertexColorBuffer;
+		var cubeVertexPositionBuffer;
+		var cubeVertexColorBuffer;
+		var cubeVertexIndexBuffer;
 
 		function initBuffers() {
-			triangleVertexPositionBuffer = gl.createBuffer();
-			gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+			pyramidVertexPositionBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
+			//Defining the vertices
 			var vertices = [
-				0.0,	1.0,	0.0,
-				-1.0,	-1.0,	0.0,
-				1.0,	-1.0,	0.0
+				// Front face
+				0.0, 1.0, 0.0,
+				-1.0, -1.0, 1.0,
+				1.0, -1.0, 1.0,
+
+				//Right face NOT SHOWING???????????
+				0.0, 1.0, 0.0,
+				1.0, -1.0, 1.0,
+				1.0, -1.0, -1.0,
+
+				//Back face
+				0.0, 1.0, 0.0,
+				1.0, -1.0, -1.0,
+				-1.0, -1.0, -1.0,
+
+				//Left face
+				0.0, 1.0, 0.0,
+				-1.0, -1.0, -1.0,
+				-1.0, -1.0, 1.0
 			];
-
 			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+			pyramidVertexPositionBuffer.itemSize = 3;
+			pyramidVertexPositionBuffer.numItems = 12;
 
-			triangleVertexPositionBuffer.itemSize = 3;
-			triangleVertexPositionBuffer.numItems = 3;
+			pyramidVertexColorBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexColorBuffer);
+			var colors = [
+				// Front face
+	            1.0, 0.0, 0.0, 1.0,
+	            0.0, 1.0, 0.0, 1.0,
+	            0.0, 0.0, 1.0, 1.0,
+
+	            // Right face
+	            1.0, 0.0, 0.0, 1.0,
+	            0.0, 0.0, 1.0, 1.0,
+	            0.0, 1.0, 0.0, 1.0,
+
+	            // Back face
+	            1.0, 0.0, 0.0, 1.0,
+	            0.0, 1.0, 0.0, 1.0,
+	            0.0, 0.0, 1.0, 1.0,
+
+	            // Left face
+	            1.0, 0.0, 0.0, 1.0,
+	            0.0, 0.0, 1.0, 1.0,
+	            0.0, 1.0, 0.0, 1.0
+			];
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+			pyramidVertexColorBuffer.itemSize = 4;
+			pyramidVertexColorBuffer.numItems = 12;
+
+			cubeVertexPositionBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+			vertices = [
+				//Front face
+				-1.0, -1.0, 1.0,
+				 1.0, -1.0, 1.0,
+				 1.0,  1.0, 1.0,
+				-1.0,  1.0, 1.0,
+
+				//Back face
+				-1.0, -1.0, -1.0,
+				-1.0,  1.0, -1.0,
+				 1.0,  1.0, -1.0,
+				 1.0, -1.0, -1.0,
+
+				//Top face
+				-1.0,  1.0, -1.0,
+				-1.0,  1.0,  1.0,
+				 1.0,  1.0,  1.0,
+				 1.0,  1.0, -1.0,
+
+				//Bottom face
+				-1.0, -1.0, -1.0,
+				 1.0, -1.0, -1.0,
+				 1.0, -1.0,  1.0,
+				-1.0, -1.0,  1.0,
+
+				//Right face
+				 1.0, -1.0, -1.0,
+				 1.0,  1.0, -1.0,
+				 1.0,  1.0,  1.0,
+				 1.0, -1.0,  1.0,
+
+				//Left face
+				-1.0, -1.0, -1.0,
+				-1.0, -1.0,  1.0,
+				-1.0,  1.0,  1.0,
+				-1.0,  1.0, -1.0		
+			];
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+			cubeVertexPositionBuffer.itemSize = 3;
+			cubeVertexPositionBuffer.numItems = 24;
+
+			cubeVertexColorBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexColorBuffer);
+			colors = [
+				[0.203921, 0.2705882353, 0.4156862745, 1.0], // Front face
+	            [0.168627451, 0.5921568627, 0.7450980392, 1.0], // Back face
+	            [0.768627451, 0.9058823529, 0.9607843137, 1.0], // Top face
+	            [0.5176470588, 0.8196078431, 0.8196078431, 1.0], // Bottom face
+	            [0.811764706, 0.917647059, 0.909803922, 1.0], // Right face
+	            [0.984313725, 0.77254902, 0.662745098, 1.0]  // Left face
+			];
+			var unpackedColors = [];
+			for (var i in colors) {
+				var color = colors[i];
+				for (var j = 0; j < 4; ++j) {
+					unpackedColors = unpackedColors.concat(color);
+				}
+			}
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(unpackedColors), gl.STATIC_DRAW);
+			cubeVertexColorBuffer.itemSize = 4;
+			cubeVertexColorBuffer.numItems = 24;
+
+			/*****************************************
+			No clue what this section of code does
+			*****************************************/
+			cubeVertexIndexBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+			var cubeVertexIndices = [
+	            0, 1, 2,      0, 2, 3,    // Front face
+	            4, 5, 6,      4, 6, 7,    // Back face
+	            8, 9, 10,     8, 10, 11,  // Top face
+	            12, 13, 14,   12, 14, 15, // Bottom face
+	            16, 17, 18,   16, 18, 19, // Right face
+	            20, 21, 22,   20, 22, 23  // Left face
+	        ];
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+	        cubeVertexIndexBuffer.itemSize = 1;
+	        cubeVertexIndexBuffer.numItems = 36;
 		}
+
+		var rPyramid = 0;
+		var rCube = 0;
+
+		var CubeXRotate = 0;
+		var CubeYRotate = 0;
+		var CubeZRotate = 0;
+
+		var CubeXScale = 1;
+		var CubeYScale = 1;
+		var CubeZScale = 1;
+
+		var CubeXTrandlate = 4;
+		var CubeYTrandlate = 0;
+		var CubeZTrandlate = 0;
+
+		var PyramidXRotate = 0;
+		var PyramidYRotate = 0;
+		var PyramidZRotate = 0;
+
+		var PyramidXScale = 1;
+		var PyramidYScale = 1;
+		var PyramidZScale = 1;
+
+		var PyramidXTrandlate = 0;
+		var PyramidYTrandlate = 0;
+		var PyramidZTrandlate = 0;
+
+		var buildAHouse = false;
 
 		function drawScene() {
 			gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-			mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-			
+			mat4.perspective(45, gl.viewportWidth/ gl.viewportHeight, 0.1, 100.0, pMatrix);
+
 			mat4.identity(mvMatrix);
 
-			mat4.translate(mvMatrix, [0.0, 0.0, -7.0]);
-			gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-			//alert(shader_program.vertexPositionAttribute);
-			gl.vertexAttribPointer(shader_program.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0 ,0);
+			mat4.translate(mvMatrix, [-2.5, 0, -6]);
+
+			mat4.translate(mvMatrix, [PyramidXTrandlate, PyramidYTrandlate, PyramidZTrandlate]);
+			mvPushMatrix();
+			mat4.rotate(mvMatrix, degToRad(rPyramid), [PyramidXRotate, PyramidYRotate, PyramidZRotate]);
+			mat4.scale(mvMatrix, [PyramidXScale, PyramidYScale, PyramidZScale]);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexPositionBuffer);
+			gl.vertexAttribPointer(shader_program.vertexPositionAttribute, pyramidVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, pyramidVertexColorBuffer);
+			gl.vertexAttribPointer(shader_program.vertexColorAttribute, pyramidVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
 			setMatrixUniforms();
-			gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+			gl.drawArrays(gl.TRIANGLES, 0, pyramidVertexPositionBuffer.numItems);
+
+			mvPopMatrix();
+
+			mat4.translate(mvMatrix, [CubeXTrandlate - PyramidXTrandlate, CubeYTrandlate - PyramidYTrandlate, CubeZTrandlate - PyramidZTrandlate]);
+
+	        mvPushMatrix();
+	        mat4.rotate(mvMatrix, degToRad(rCube), [CubeXRotate, CubeYRotate, CubeZRotate]);
+	        mat4.scale(mvMatrix, [CubeXScale, CubeYScale, CubeZScale]);
+	        
+	        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+	        gl.vertexAttribPointer(shader_program.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	        
+	        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexColorBuffer);
+	        gl.vertexAttribPointer(shader_program.vertexColorAttribute, cubeVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	        
+	        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+	        setMatrixUniforms();
+	        gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	        
+	        mvPopMatrix();
+		}
+
+		var lastTime = 0;
+
+		function animate() {
+			if (!buildAHouse) {
+				var timeNow = new Date().getTime();
+				if (lastTime != 0) {
+					var elapsed = timeNow - lastTime;
+					rPyramid += (90 * elapsed) / 1000.0;
+					rCube -= (75 * elapsed) / 1000.0;
+
+					CubeXRotate = document.getElementById('xCubeR').value/ 100;
+					CubeYRotate = document.getElementById('yCubeR').value/ 100;
+					CubeZRotate = document.getElementById('zCubeR').value/ 100;
+
+					CubeXScale = document.getElementById('xCubeSc').value/ 20;
+					CubeYScale = document.getElementById('yCubeSc').value/ 20;
+					CubeZScale = document.getElementById('zCubeSc').value/ 20;
+
+					CubeXTrandlate = document.getElementById('xCubeT').value/ 10;
+					CubeYTrandlate = document.getElementById('yCubeT').value/ 10;
+					CubeZTrandlate = document.getElementById('zCubeT').value/ 10;
+
+					PyramidXRotate = document.getElementById('xPyramidR').value/ 100;
+					PyramidYRotate = document.getElementById('yPyramidR').value/ 100;
+					PyramidZRotate = document.getElementById('zPyramidR').value/ 100;
+
+					PyramidXScale = document.getElementById('xPyramidSc').value/ 20;
+					PyramidYScale = document.getElementById('yPyramidSc').value/ 20;
+					PyramidZScale = document.getElementById('zPyramidSc').value/ 20;
+
+					PyramidXTrandlate = document.getElementById('xPyramidT').value/ 10;
+					PyramidYTrandlate = document.getElementById('yPyramidT').value/ 10;
+					PyramidZTrandlate = document.getElementById('zPyramidT').value/ 10;
+				}
+				lastTime = timeNow;
+			}
+			
+		}
+
+		function tick() {
+			requestAnimFrame(tick);
+
+			drawScene();
+			animate();
 		}
 
 		function webGLStart() {
-			var canvas = document.getElementById("webgl-intro") ;
-			initGL ( canvas ) ;
-			initShaders () ;
-			initBuffers () ;
-			gl.clearColor (0.0 , 0.0 , 0.0 , 1.0) ;
-			gl.enable ( gl . DEPTH_TEST ) ;
-			drawScene () ;
+			var canvas = document.getElementById("webgl-intro");
+			initGL(canvas);
+        	
+        	initShaders()
+        	initBuffers();
+        	
+        	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        	gl.enable(gl.DEPTH_TEST);
+
+        	tick();
+		}
+
+		function resetCube() {
+			document.getElementById('xCubeR').value = 0;
+			document.getElementById('yCubeR').value = 0;
+			document.getElementById('zCubeR').value = 0;
+
+			document.getElementById('xCubeSc').value = 20;
+			document.getElementById('yCubeSc').value = 20;
+			document.getElementById('zCubeSc').value = 20;
+
+			document.getElementById('xCubeT').value = 40;
+			document.getElementById('yCubeT').value = 0;
+			document.getElementById('zCubeT').value = 0;
+		}
+
+		function resetPyramid() {
+			document.getElementById('xPyramidR').value = 0;
+			document.getElementById('yPyramidR').value = 0;
+			document.getElementById('zPyramidR').value = 0;
+
+			document.getElementById('xPyramidSc').value = 20;
+			document.getElementById('yPyramidSc').value = 20;
+			document.getElementById('zPyramidSc').value = 20;
+
+			document.getElementById('xPyramidT').value = 0;
+			document.getElementById('yPyramidT').value = 0;
+			document.getElementById('zPyramidT').value = 0;
+		}
+
+		function buildHouse() {
+			buildAHouse = true;
+			CubeXRotate = 0;
+			CubeYRotate = 0;
+			CubeZRotate = 0;
+
+			CubeXScale = 1;
+			CubeYScale = 1;
+			CubeZScale = 1;
+
+			CubeXTrandlate = 4;
+			CubeYTrandlate = -1;
+			CubeZTrandlate = 0;
+
+			PyramidXRotate = 0;
+			PyramidYRotate = 0;
+			PyramidZRotate = 0;
+
+			PyramidXScale = 1;
+			PyramidYScale = 1;
+			PyramidZScale = 1;
+
+			PyramidXTrandlate = 4;
+			PyramidYTrandlate = 1;
+			PyramidZTrandlate = 0;
+
+			document.getElementById('basic').style.visibility = 'hidden';
+			document.getElementById('house').style.visibility = 'visible';
 		}
 	</script>
 </head>
 <body onload="webGLStart();">
-	<canvas id="webgl-intro" width="500" height="500"></canvas>
+	<canvas id="webgl-intro" width="1000" height="400"></canvas>
+
+	<div style="width: 100%; overflow: hidden; visibility: visible;" id='basic'>
+		<div class='cube' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
+			<h3>Cube Controls</h3>
+			<form style="float:left;">
+				<label>x-rotation</label><br>
+				<input type="range" id="xCubeR" value="0" max="100" min="-100"><br>
+
+				<label>y-rotation</label><br>
+				<input type="range" id="yCubeR" value="0" max="100" min="-100"><br>
+
+				<label>z-rotation</label><br>
+				<input type="range" id="zCubeR" value="0" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-scaling</label><br>
+				<input type="range" id="xCubeSc" value="20" max="100" min="-100"><br>
+
+				<label>y-scaling</label><br>
+				<input type="range" id="yCubeSc" value="20" max="100" min="-100"><br>
+
+				<label>z-scaling</label><br>
+				<input type="range" id="zCubeSc" value="20" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-translation</label><br>
+				<input type="range" id="xCubeT" value="40" max="70" min="25"><br>
+
+				<label>y-translation</label><br>
+				<input type="range" id="yCubeT" value="0" max="50" min="-50"><br>
+
+				<label>z-translation</label><br>
+				<input type="range" id="zCubeT" value="0" max="50" min="-50"><br>
+			</form><br>
+
+			<button onclick="resetCube();">Reset Cube</button>
+		</div>
+		<div class='pyramid' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
+			<h3>Pyramid Controls</h3>
+			<form style="float:left;">
+				<label>x-rotation</label><br>
+				<input type="range" id="xPyramidR" value="0" max="100" min="-100"><br>
+
+				<label>y-rotation</label><br>
+				<input type="range" id="yPyramidR" value="0" max="100" min="-100"><br>
+
+				<label>z-rotation</label><br>
+				<input type="range" id="zPyramidR" value="0" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-scaling</label><br>
+				<input type="range" id="xPyramidSc" value="20" max="100" min="-100"><br>
+
+				<label>y-scaling</label><br>
+				<input type="range" id="yPyramidSc" value="20" max="100" min="-100"><br>
+
+				<label>z-scaling</label><br>
+				<input type="range" id="zPyramidSc" value="20" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-translation</label><br>
+				<input type="range" id="xPyramidT" value="0" max="20" min="-20"><br>
+
+				<label>y-translation</label><br>
+				<input type="range" id="yPyramidT" value="0" max="35" min="-30"><br>
+
+				<label>z-translation</label><br>
+				<input type="range" id="zPyramidT" value="0" max="35" min="-120"><br>
+			</form><br>
+
+			<button onclick="resetPyramid();">Reset Pyramid</button>
+		</div>
+		<div class='houseButton' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
+			<button onclick="buildHouse();">Build A House</button>
+		</div>
+	</div>
+
+	<div style="width: 100%; overflow: hidden; visibility: hidden;" id='house'>
+		<div class='house' style="float:left; border: 1px solid black; padding:10px; margin:10px;">
+			<h3>House Controls</h3>
+			<form style="float:left;">
+				<label>x-rotation</label><br>
+				<input type="range" id="xCubeR" value="0" max="100" min="-100"><br>
+
+				<label>y-rotation</label><br>
+				<input type="range" id="yCubeR" value="0" max="100" min="-100"><br>
+
+				<label>z-rotation</label><br>
+				<input type="range" id="zCubeR" value="0" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-scaling</label><br>
+				<input type="range" id="xCubeSc" value="20" max="100" min="-100"><br>
+
+				<label>y-scaling</label><br>
+				<input type="range" id="yCubeSc" value="20" max="100" min="-100"><br>
+
+				<label>z-scaling</label><br>
+				<input type="range" id="zCubeSc" value="20" max="100" min="-100"><br>
+			</form>
+			<form style="float:left;">
+				<label>x-translation</label><br>
+				<input type="range" id="xCubeT" value="40" max="70" min="25"><br>
+
+				<label>y-translation</label><br>
+				<input type="range" id="yCubeT" value="0" max="50" min="-50"><br>
+
+				<label>z-translation</label><br>
+				<input type="range" id="zCubeT" value="0" max="50" min="-50"><br>
+			</form><br>
+
+			<button onclick="resetCube();">Reset House</button>
+		</div>
+	</div>
 </body>
 </html>
